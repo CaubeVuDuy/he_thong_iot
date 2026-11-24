@@ -1,0 +1,1749 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hệ Thống IoT Giám Sát Người Cao Tuổi</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #f1f5f9;
+            --surface: #ffffff;
+            --surface-card: #ffffff;
+            --surface-subtle: #f8fafc;
+            --border: rgba(15, 23, 42, 0.11);
+            --text-primary: #0f172a;
+            --text-secondary: #475569;
+            --accent-blue: #0284c7;
+            --accent-green: #059669;
+            --accent-red: #dc2626;
+            --accent-heart: #e11d48;
+            --accent-amber: #d97706;
+            --accent-purple: #7c3aed;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Outfit', sans-serif;
+            background-color: var(--bg);
+            color: var(--text-primary);
+            padding: 20px 16px;
+            min-height: 100vh;
+        }
+
+        .hidden { display: none !important; }
+        .container { max-width: 1260px; margin: 0 auto; }
+
+        /* ================= LOGIN 3-STEP OVERLAY ================= */
+        .auth-wrapper {
+            min-height: calc(100vh - 40px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .auth-card {
+            width: 100%;
+            max-width: 470px;
+            background: var(--surface-card);
+            border: 1px solid var(--border);
+            border-radius: 22px;
+            padding: 28px;
+            box-shadow: 0 14px 36px rgba(15, 23, 42, 0.08);
+        }
+        .auth-title {
+            text-align: center;
+            font-size: 1.45rem;
+            font-weight: 800;
+            margin-bottom: 6px;
+            background: linear-gradient(135deg, #0f172a 20%, var(--accent-blue));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .auth-sub {
+            text-align: center;
+            color: var(--text-secondary);
+            font-size: 0.88rem;
+            margin-bottom: 20px;
+        }
+        .stepper {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+            margin-bottom: 22px;
+        }
+        .step-pill {
+            padding: 8px 6px;
+            text-align: center;
+            font-size: 0.76rem;
+            font-weight: 700;
+            border-radius: 10px;
+            background: var(--surface-subtle);
+            color: var(--text-secondary);
+            border: 1px solid var(--border);
+        }
+        .step-pill.active {
+            background: rgba(2, 132, 199, 0.12);
+            color: #0369a1;
+            border-color: rgba(2, 132, 199, 0.45);
+        }
+        .step-pill.done {
+            background: rgba(5, 150, 105, 0.12);
+            color: #047857;
+            border-color: rgba(5, 150, 105, 0.45);
+        }
+        .form-group { margin-bottom: 14px; }
+        .form-label {
+            display: block;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            margin-bottom: 6px;
+        }
+        .form-input {
+            width: 100%;
+            padding: 12px 14px;
+            border-radius: 12px;
+            border: 1px solid #cbd5e1;
+            background: var(--surface-subtle);
+            color: var(--text-primary);
+            font-family: inherit;
+            font-size: 0.98rem;
+            outline: none;
+        }
+        .form-input:focus {
+            border-color: var(--accent-blue);
+            background: #ffffff;
+            box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.12);
+        }
+        .masked-input {
+            -webkit-text-security: disc;
+            text-security: disc;
+        }
+        .otp-input {
+            text-align: center;
+            font-size: 1.7rem;
+            font-weight: 800;
+            letter-spacing: 8px;
+        }
+        .btn-primary {
+            width: 100%;
+            padding: 13px;
+            border: none;
+            border-radius: 12px;
+            background: linear-gradient(135deg, #0284c7, #0ea5e9);
+            color: #ffffff;
+            font-family: inherit;
+            font-size: 0.98rem;
+            font-weight: 700;
+            cursor: pointer;
+            margin-top: 4px;
+        }
+        .btn-primary:hover { filter: brightness(0.96); }
+        .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
+        .btn-secondary {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #cbd5e1;
+            border-radius: 10px;
+            background: var(--surface-subtle);
+            color: var(--text-secondary);
+            font-family: inherit;
+            font-size: 0.86rem;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 8px;
+        }
+        .btn-secondary:hover { background: #e2e8f0; }
+        .auth-msg {
+            margin-top: 12px;
+            padding: 10px 12px;
+            border-radius: 10px;
+            font-size: 0.85rem;
+            line-height: 1.4;
+        }
+        .auth-err {
+            background: #fef2f2;
+            border: 1px solid #fecaca;
+            color: #b91c1c;
+        }
+        .auth-ok {
+            background: #ecfdf5;
+            border: 1px solid #a7f3d0;
+            color: #047857;
+        }
+
+        /* ================= HEADER & TOP BAR ================= */
+        .header {
+            text-align: center;
+            margin-bottom: 18px;
+        }
+        .header h1 {
+            font-size: 1.9rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, #0f172a 25%, var(--accent-blue) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .user-bar {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 12px 18px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-bottom: 18px;
+            box-shadow: 0 2px 10px rgba(15, 23, 42, 0.04);
+        }
+        .user-meta {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+            font-size: 0.9rem;
+        }
+        .role-badge {
+            padding: 4px 10px;
+            border-radius: 999px;
+            font-size: 0.78rem;
+            font-weight: 800;
+            background: rgba(2, 132, 199, 0.12);
+            color: #0369a1;
+            border: 1px solid rgba(2, 132, 199, 0.3);
+        }
+        .btn-logout {
+            padding: 8px 14px;
+            border-radius: 10px;
+            border: 1px solid #fecaca;
+            background: #fef2f2;
+            color: #dc2626;
+            font-family: inherit;
+            font-weight: 700;
+            font-size: 0.85rem;
+            cursor: pointer;
+        }
+        .btn-logout:hover { background: #fee2e2; }
+
+        .network-bar {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 12px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-bottom: 22px;
+            font-size: 0.88rem;
+            box-shadow: 0 2px 10px rgba(15, 23, 42, 0.04);
+        }
+        .net-item { display: flex; align-items: center; gap: 8px; }
+        .dot-live {
+            width: 10px; height: 10px;
+            background-color: var(--accent-green);
+            border-radius: 50%;
+            box-shadow: 0 0 10px var(--accent-green);
+            animation: pulse-dot 1.5s infinite;
+        }
+        @keyframes pulse-dot {
+            0%, 100% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.3); opacity: 0.6; }
+        }
+
+        /* ================= DOCTOR CARDS ================= */
+        .grid-3 {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 20px;
+            margin-bottom: 24px;
+        }
+        @media (max-width: 980px) {
+            .grid-3 {
+                grid-template-columns: 1fr;
+            }
+        }
+        .grid-2 {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 16px;
+            margin-bottom: 22px;
+        }
+        .card {
+            background: var(--surface-card);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            box-shadow: 0 6px 20px rgba(15, 23, 42, 0.06);
+        }
+        .card-tag {
+            font-size: 0.74rem;
+            text-transform: uppercase;
+            font-weight: 700;
+            letter-spacing: 0.8px;
+            color: var(--accent-blue);
+            margin-bottom: 6px;
+        }
+        .card-title {
+            font-size: 1.12rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 14px;
+        }
+        .metrics-row { display: flex; gap: 14px; margin: 10px 0; }
+        .metric-box {
+            flex: 1;
+            background: var(--surface-subtle);
+            padding: 14px;
+            border-radius: 14px;
+            border: 1px solid var(--border);
+            text-align: center;
+        }
+        .metric-val { font-size: 2.1rem; font-weight: 800; line-height: 1.1; }
+        .metric-unit { font-size: 0.82rem; color: var(--text-secondary); margin-bottom: 4px; }
+
+        .status-badge-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 14px 6px;
+            text-align: center;
+        }
+        .badge-status {
+            padding: 13px 20px;
+            border-radius: 999px;
+            font-size: 1.05rem;
+            font-weight: 800;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .badge-wait { background: #fffbeb; color: #b45309; border: 1.5px solid #f59e0b; }
+        .badge-normal { background: #ecfdf5; color: #047857; border: 1.5px solid #10b981; }
+        .badge-danger {
+            background: var(--accent-red); color: #fff; border: 1.5px solid #fecaca;
+            box-shadow: 0 0 20px rgba(220, 38, 38, 0.45);
+            animation: danger-pulse 1s infinite alternate;
+        }
+        @keyframes danger-pulse {
+            from { transform: scale(1); }
+            to { transform: scale(1.05); }
+        }
+        .state-grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; width: 100%; margin-top: 14px; }
+        .state-pill {
+            padding: 9px 6px;
+            border-radius: 10px;
+            font-size: 0.78rem;
+            font-weight: 700;
+            text-align: center;
+            background: var(--surface-subtle);
+            color: var(--text-secondary);
+            border: 1px solid #cbd5e1;
+            opacity: 0.7;
+        }
+        .state-pill.active-normal { opacity: 1; background: #ecfdf5; color: #047857; border-color: #10b981; }
+        .state-pill.active-fall { opacity: 1; background: var(--accent-red); color: #fff; border-color: var(--accent-red); }
+        .belt-buzzer-box {
+            margin-top: 12px;
+            padding: 10px 12px;
+            border-radius: 12px;
+            background: var(--surface-subtle);
+            border: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+        }
+        .belt-buzzer-info { font-size: 0.8rem; color: var(--text-secondary); font-weight: 600; }
+        .btn-mute-compact {
+            padding: 8px 12px;
+            border: 1px solid #334155;
+            border-radius: 10px;
+            background: #475569;
+            color: #fff;
+            font-family: inherit;
+            font-size: 0.8rem;
+            font-weight: 700;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+        .btn-mute-compact:hover { background: #334155; }
+
+        /* CAMERA HYBRID */
+        .camera-container {
+            width: 100%;
+            height: 185px;
+            background: var(--surface-subtle);
+            border-radius: 14px;
+            overflow: hidden;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid #cbd5e1;
+        }
+        .camera-container.live-active { background: #0f172a; }
+        .camera-container img { width: 100%; height: 100%; object-fit: contain; display: block; }
+        .cam-yolo-canvas {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 2;
+        }
+        .cam-standby {
+            padding: 14px;
+            text-align: center;
+            color: var(--text-secondary);
+            font-size: 0.84rem;
+            line-height: 1.45;
+        }
+        .cam-overlay {
+            position: absolute; top: 8px; left: 8px;
+            z-index: 3;
+            background: rgba(15, 23, 42, 0.78);
+            color: #ffffff;
+            padding: 4px 10px; border-radius: 6px; font-size: 0.73rem; font-weight: 700;
+            display: flex; align-items: center; gap: 6px;
+        }
+        .cam-rec-dot { width: 8px; height: 8px; background: #ef4444; border-radius: 50%; animation: pulse-dot 1s infinite; }
+        .cam-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+        .btn-cam {
+            flex: 1;
+            padding: 8px 10px;
+            border-radius: 10px;
+            border: 1px solid #bae6fd;
+            background: #e0f2fe;
+            color: #0369a1;
+            font-family: inherit;
+            font-size: 0.8rem;
+            font-weight: 700;
+            cursor: pointer;
+        }
+        .btn-cam:hover { background: #bae6fd; }
+        .btn-cam.live-on { background: #fee2e2; color: #b91c1c; border-color: #fca5a5; }
+
+        .buzzer-status-box {
+            background: var(--surface-subtle); padding: 12px; border-radius: 12px;
+            margin-bottom: 12px; text-align: center; font-weight: 600;
+        }
+        .btn-group { display: flex; flex-direction: column; gap: 10px; }
+        .btn {
+            width: 100%; padding: 12px; border: none; border-radius: 12px;
+            font-family: inherit; font-size: 0.92rem; font-weight: 700; cursor: pointer;
+        }
+        .btn-mute { background: #475569; color: #fff; }
+        .btn-alarm { background: linear-gradient(135deg, #ef4444, #dc2626); color: #fff; }
+
+        /* TABLES & SECTIONS */
+        .history-section {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 18px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 16px rgba(15, 23, 42, 0.05);
+        }
+        .section-head {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 14px;
+        }
+        .history-title { font-size: 1.08rem; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+        table { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
+        th, td { text-align: left; padding: 10px 10px; border-bottom: 1px solid #e2e8f0; }
+        th { color: var(--text-secondary); font-weight: 600; }
+
+        .tag-pill {
+            display: inline-block;
+            padding: 3px 9px;
+            border-radius: 999px;
+            font-size: 0.76rem;
+            font-weight: 700;
+        }
+        .tag-ok { background: #dcfce7; color: #15803d; }
+        .tag-warn { background: #fef3c7; color: #b45309; }
+        .tag-err { background: #fee2e2; color: #b91c1c; }
+        .tag-crit { background: var(--accent-red); color: #fff; }
+
+        .filter-row { display: flex; gap: 8px; flex-wrap: wrap; }
+        .filter-btn {
+            padding: 6px 12px;
+            border-radius: 8px;
+            border: 1px solid #cbd5e1;
+            background: var(--surface-subtle);
+            color: var(--text-secondary);
+            font-family: inherit;
+            font-size: 0.8rem;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        .filter-btn.active { background: var(--accent-blue); color: #ffffff; border-color: var(--accent-blue); }
+
+        .btn-link-photo {
+            margin-left: 8px;
+            padding: 3px 8px;
+            border-radius: 6px;
+            border: 1px solid #7dd3fc;
+            background: #e0f2fe;
+            color: #0369a1;
+            font-size: 0.76rem;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        /* PHOTO MODAL */
+        .modal-backdrop {
+            position: fixed; inset: 0;
+            background: rgba(15, 23, 42, 0.55);
+            display: flex; align-items: center; justify-content: center;
+            z-index: 999; padding: 16px;
+        }
+        .modal-box {
+            background: var(--surface-card);
+            border: 1px solid #cbd5e1;
+            border-radius: 16px;
+            max-width: 640px; width: 100%;
+            padding: 16px;
+            box-shadow: 0 20px 50px rgba(15, 23, 42, 0.25);
+        }
+        .modal-box img { width: 100%; border-radius: 10px; margin-top: 10px; max-height: 70vh; object-fit: contain; background: #0f172a; }
+    </style>
+</head>
+<body>
+
+<!-- ==================== MÀN HÌNH ĐĂNG NHẬP 3 BƯỚC ==================== -->
+<div id="authOverlay" class="auth-wrapper">
+    <div class="auth-card">
+        <div class="auth-title">HỆ THỐNG IoT VIỆN DƯỠNG LÃO</div>
+        <div class="auth-sub">Xác thực 2 lớp (Mật khẩu + Mã OTP 6 số qua Gmail)</div>
+
+        <div class="stepper">
+            <div id="stepInd1" class="step-pill active">1. Tài khoản</div>
+            <div id="stepInd2" class="step-pill">2. Gmail</div>
+            <div id="stepInd3" class="step-pill">3. OTP 6 số</div>
+        </div>
+
+        <!-- Bước 1: Số tài khoản + Mật khẩu -->
+        <div id="formStep1">
+            <div class="form-group">
+                <label class="form-label" for="authUserField">Số tài khoản</label>
+                <input id="authUserField" class="form-input" type="text" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" onkeydown="if (event.key === 'Enter') submitStep1()">
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="authPassField">Mật khẩu</label>
+                <input id="authPassField" class="form-input masked-input" type="text" placeholder="Nhập mật khẩu" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" onkeydown="if (event.key === 'Enter') submitStep1()">
+            </div>
+            <button id="btnStep1" class="btn-primary" type="button" onclick="submitStep1()">Tiếp tục sang Bước 2</button>
+        </div>
+
+        <!-- Bước 2: Nhập Gmail xác nhận -->
+        <div id="formStep2" class="hidden">
+            <div class="auth-msg auth-ok" style="margin-top:0; margin-bottom:14px;">
+                Tài khoản hợp lệ. Nhập đúng địa chỉ Gmail đã đăng ký để hệ thống gửi mã OTP 6 số.
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="authMailField">Địa chỉ Gmail</label>
+                <input id="authMailField" class="form-input" type="text" inputmode="email" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" onkeydown="if (event.key === 'Enter') submitStep2()">
+            </div>
+            <button id="btnStep2" class="btn-primary" type="button" onclick="submitStep2()">Gửi mã OTP 6 số qua Gmail</button>
+            <button class="btn-secondary" type="button" onclick="resetToStep1()">Quay lại Bước 1</button>
+        </div>
+
+        <!-- Bước 3: Nhập OTP 6 số -->
+        <div id="formStep3" class="hidden">
+            <div id="otpSentNotice" class="auth-msg auth-ok" style="margin-top:0; margin-bottom:14px;"></div>
+            <div class="form-group">
+                <label class="form-label" for="authCodeField">Mã OTP gồm 6 chữ số (còn hiệu lực: <span id="otpCountdown">03:00</span>)</label>
+                <input id="authCodeField" class="form-input otp-input" type="text" inputmode="numeric" maxlength="6" placeholder="000000" autocomplete="off" spellcheck="false" onkeydown="if (event.key === 'Enter') submitStep3()">
+            </div>
+            <button id="btnStep3" class="btn-primary" type="button" onclick="submitStep3()">Xác minh & Đăng nhập</button>
+            <button id="btnResendOtp" class="btn-secondary" type="button" onclick="resendOtp()">Gửi lại mã OTP mới</button>
+            <button class="btn-secondary" type="button" onclick="resetToStep1()">Đổi tài khoản khác</button>
+        </div>
+
+        <div id="authErrorBox" class="auth-msg auth-err hidden"></div>
+    </div>
+</div>
+
+<!-- ==================== GIAO DIỆN CHÍNH SAU ĐĂNG NHẬP ==================== -->
+<div id="appContainer" class="container hidden">
+    <header class="header">
+        <h1>HỆ THỐNG GIÁM SÁT SỨC KHỎE & TÉ NGÃ NGƯỜI CAO TUỔI</h1>
+    </header>
+
+    <div class="user-bar">
+        <div class="user-meta">
+            <span id="userRoleBadge" class="role-badge">--</span>
+            <span>Xin chào <strong id="userDisplayName">--</strong></span>
+            <span style="color: var(--text-secondary);">| Số TK: <strong id="userAccNum" style="color:var(--text-primary);">--</strong></span>
+            <span style="color: var(--text-secondary);">| Gmail: <span id="userGmail">--</span></span>
+        </div>
+        <button class="btn-logout" onclick="logout()">Đăng xuất</button>
+    </div>
+
+    <!-- ============ VIEW 1: BÁC SĨ (DOCTOR) ============ -->
+    <div id="viewDoctor" class="hidden">
+        <div class="network-bar">
+            <div class="net-item">
+                <span class="dot-live"></span>
+                <span>Mạng: <strong>Wi-Fi LAN Nội Bộ (172.20.10.x)</strong></span>
+            </div>
+            <div class="net-item">
+                <span>⚡ Cập nhật: <strong id="refreshClock">--</strong></span>
+            </div>
+        </div>
+
+        <div class="grid-3">
+            <!-- 1. Mạch có dây -->
+            <div class="card">
+                <div>
+                    <div class="card-tag">Mạch Có Dây</div>
+                    <h3 class="card-title">🫀 Đo Nhịp Tim Và Oxy Máu</h3>
+                    <div class="metrics-row">
+                        <div class="metric-box">
+                            <div class="metric-unit">Nhịp tim (BPM)</div>
+                            <div class="metric-val" style="color: var(--accent-heart);"><span id="valBpm">--</span></div>
+                        </div>
+                        <div class="metric-box">
+                            <div class="metric-unit">Oxy máu (SpO₂)</div>
+                            <div class="metric-val" style="color: var(--accent-blue);"><span id="valSpo2">--</span><small style="font-size:1rem;">%</small></div>
+                        </div>
+                    </div>
+                </div>
+                <div style="font-size:0.8rem; color:var(--text-secondary); margin-top:10px;">
+                    Lần đo cuối: <span id="vitalsTime" style="color:var(--text-primary);">--</span>
+                </div>
+            </div>
+
+            <!-- 2. Mạch không dây -->
+            <div class="card">
+                <div>
+                    <div class="card-tag">Mạch Không Dây</div>
+                    <h3 class="card-title">🏃 Đai Đeo Phát Hiện Ngã</h3>
+                    <div class="status-badge-container">
+                        <div id="fallBadge" class="badge-status badge-wait">
+                            <span>⏳</span> <span>CHỜ TÍN HIỆU ĐAI</span>
+                        </div>
+                        <div class="state-grid-2">
+                            <div id="pillNormal" class="state-pill">🟢 BÌNH THƯỜNG</div>
+                            <div id="pillFall" class="state-pill">🚨 TÉ NGÃ</div>
+                        </div>
+                    </div>
+                    <div class="belt-buzzer-box">
+                        <div class="belt-buzzer-info">
+                            Còi đai: <span id="buzzerState" style="color:var(--accent-green); font-weight:800;">ĐANG TẮT</span>
+                        </div>
+                        <button class="btn-mute-compact" onclick="controlBuzzer('BUZZER_OFF')">🔇 Tắt còi cảnh báo</button>
+                    </div>
+                </div>
+                <div style="font-size:0.8rem; color:var(--text-secondary); text-align:center; margin-top:10px;">
+                    Thời gian: <strong id="beltTime" style="color:var(--accent-amber);">Đang chờ mạch không dây...</strong>
+                </div>
+            </div>
+
+            <!-- 3. Camera hiện trường (Chỉ Bác sĩ xem - Cơ chế Kết hợp) -->
+            <div class="card">
+                <div>
+                    <div class="card-tag">Camera Hiện Trường (Chỉ Bác Sĩ Xem)</div>
+                    <h3 class="card-title">📹 Giám Sát Phòng</h3>
+                    <div id="camBoxWrapper" class="camera-container">
+                        <div id="camOverlayBadge" class="cam-overlay hidden">
+                            <span class="cam-rec-dot"></span>
+                            <span id="camOverlayText">LIVE STREAM</span>
+                        </div>
+                        <img id="camLiveImg" class="hidden" alt="Camera Stream">
+                        <canvas id="camYoloCanvas" class="cam-yolo-canvas hidden"></canvas>
+                        <div id="camStandbyBox" class="cam-standby">
+                            Chế độ bảo vệ riêng tư: Camera đang chờ.<br>Tự động chụp ảnh & mở Live khi có cảnh báo Té ngã.
+                        </div>
+                    </div>
+                    <div class="cam-actions">
+                        <button id="btnToggleLive" class="btn-cam" onclick="toggleManualLive()">Mở Live Stream</button>
+                        <button class="btn-cam" onclick="manualCapture()">Chụp kiểm tra</button>
+                        <button id="btnViewFallPhoto" class="btn-cam hidden" onclick="viewLatestFallPhoto()">📷 Ảnh té ngã gần nhất</button>
+                    </div>
+                </div>
+                <div style="font-size:0.78rem; color:var(--text-secondary); margin-top:8px;">
+                    Trạng thái: <span id="camStatusText" style="color:var(--accent-blue);">Đang chờ kết nối...</span>
+                    <div id="camYoloStatus" class="hidden" style="margin-top:4px; font-size:0.75rem; font-weight:700;"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="history-section">
+            <div class="section-head">
+                <h3 class="history-title">📋 NHẬT KÝ SỰ KIỆN GẦN NHẤT (DATABASE SQLITE)</h3>
+            </div>
+            <div style="overflow-x:auto;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Thời Gian</th>
+                            <th>Loại Sự Kiện</th>
+                            <th>Trạng Thái</th>
+                        </tr>
+                    </thead>
+                    <tbody id="doctorHistoryBody">
+                        <tr><td colspan="3" style="text-align:center; color:var(--text-secondary);">Đang tải dữ liệu...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============ VIEW 2: NGƯỜI THÂN (CHỈ LỊCH SỬ 7 NGÀY QUA) ============ -->
+    <div id="viewFamily" class="hidden">
+        <div class="network-bar">
+            <div class="net-item">
+                <span class="dot-live"></span>
+                <span>Phạm vi dữ liệu: <strong>7 ngày gần nhất (tính theo thời gian thực)</strong></span>
+            </div>
+            <div class="net-item" style="color:var(--text-secondary);">
+                <span id="familyWindowRange">--</span>
+            </div>
+        </div>
+
+        <div class="grid-2">
+            <div class="card">
+                <div class="card-tag">Thống kê 7 ngày qua</div>
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <span style="font-weight:700;">🚨 Tổng số sự cố té ngã</span>
+                    <span id="famFallCount" style="font-size:1.8rem; font-weight:800; color:var(--accent-red);">0</span>
+                </div>
+            </div>
+            <div class="card">
+                <div class="card-tag">Thống kê 7 ngày qua</div>
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <span style="font-weight:700;">❤️ Số lần đo nhịp tim & SpO₂</span>
+                    <span id="famVitalsCount" style="font-size:1.8rem; font-weight:800; color:var(--accent-blue);">0</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="history-section">
+            <div class="section-head">
+                <h3 class="history-title">🚨 LỊCH SỬ TÉ NGÃ TRONG 1 TUẦN QUA (7 NGÀY)</h3>
+            </div>
+            <div style="overflow-x:auto;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Thời Gian</th>
+                            <th>Sự Kiện</th>
+                            <th>Ghi Nhận Hệ Thống</th>
+                        </tr>
+                    </thead>
+                    <tbody id="familyFallsBody"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="history-section">
+            <div class="section-head">
+                <h3 class="history-title">🫀 LỊCH SỬ ĐO NHỊP TIM & OXY MÁU TRONG 1 TUẦN QUA (7 NGÀY)</h3>
+            </div>
+            <div style="overflow-x:auto;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Thời Gian Đo</th>
+                            <th>Nhịp Tim (BPM)</th>
+                            <th>Oxy Máu (SpO₂)</th>
+                            <th>Đánh Giá</th>
+                        </tr>
+                    </thead>
+                    <tbody id="familyVitalsBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============ VIEW 3: KỸ THUẬT VIÊN (LỖI 3 NODE & LOG ĐĂNG NHẬP 30 NGÀY) ============ -->
+    <div id="viewTech" class="hidden">
+        <div class="network-bar">
+            <div class="net-item">
+                <span class="dot-live"></span>
+                <span>Cửa sổ giám sát: <strong>30 ngày gần nhất tính theo thời gian thực</strong></span>
+            </div>
+            <div class="net-item" style="color:var(--text-secondary);">
+                <span id="techWindowRange">--</span>
+            </div>
+        </div>
+
+        <!-- Trạng thái sống/lỗi hiện tại của 3 Node phần cứng -->
+        <div id="techNodesGrid" class="grid-3"></div>
+
+        <!-- Bảng lỗi Node & Xâm nhập 30 ngày -->
+        <div class="history-section">
+            <div class="section-head">
+                <h3 class="history-title">🛠️ LỊCH SỬ LỖI NODE & CẢNH BÁO XÂM NHẬP (30 NGÀY QUA)</h3>
+                <div class="filter-row">
+                    <button id="fltAll" class="filter-btn active" onclick="setTechErrorFilter('ALL')">Tất cả</button>
+                    <button id="fltNode" class="filter-btn" onclick="setTechErrorFilter('NODE')">Lỗi phần cứng / Mạng Node</button>
+                    <button id="fltSec" class="filter-btn" onclick="setTechErrorFilter('SEC')">Cảnh báo xâm nhập</button>
+                </div>
+            </div>
+            <div style="overflow-x:auto;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Thời Gian</th>
+                            <th>Thiết Bị / Nguồn</th>
+                            <th>Mã Sự Kiện</th>
+                            <th>Mức Độ</th>
+                            <th>Chi Tiết</th>
+                        </tr>
+                    </thead>
+                    <tbody id="techErrorsBody"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Bảng lịch sử đăng nhập Web 30 ngày -->
+        <div class="history-section">
+            <div class="section-head">
+                <h3 class="history-title">🔐 LỊCH SỬ ĐĂNG NHẬP WEB (30 NGÀY QUA)</h3>
+            </div>
+            <div style="overflow-x:auto;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Thời Gian</th>
+                            <th>Số Tài Khoản</th>
+                            <th>Mật Khẩu</th>
+                            <th>Gmail Xác Thực</th>
+                            <th>Vai Trò</th>
+                            <th>Trạng Thái</th>
+                            <th>IP Truy Cập</th>
+                        </tr>
+                    </thead>
+                    <tbody id="techLoginsBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL XEM ẢNH CHỤP PHÒNG -->
+<div id="photoModal" class="modal-backdrop hidden" onclick="closePhotoModal()">
+    <div class="modal-box" onclick="event.stopPropagation()">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+            <strong id="photoModalTitle">Ảnh hiện trường</strong>
+            <button class="btn-logout" onclick="closePhotoModal()">Đóng</button>
+        </div>
+        <img id="photoModalImg" src="" alt="Room Snapshot">
+    </div>
+</div>
+
+<script>
+    let authToken = localStorage.getItem('iot_session_token') || '';
+    let currentUser = null;
+    let currentStepToken = '';
+    let otpTimerId = null;
+    let pollTimerIds = [];
+
+    let doctorManualLive = false;
+    let doctorStreamActive = false;
+    let latestFallPhotoUrl = null;
+    let techErrorFilter = 'ALL';
+    let lastTechErrors = [];
+
+    function esc(s) {
+        return String(s ?? '').replace(/[&<>"']/g, (c) => ({
+            '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+        })[c]);
+    }
+
+    function roleLabel(role) {
+        if (role === 'DOCTOR' || role === 'NURSE') return 'BÁC SĨ';
+        if (role === 'TECH') return 'KỸ THUẬT VIÊN';
+        if (role === 'FAMILY') return 'NGƯỜI THÂN';
+        return role || '--';
+    }
+
+    async function apiFetch(url, options = {}) {
+        const headers = Object.assign({ 'Content-Type': 'application/json' }, options.headers || {});
+        if (authToken) headers['Authorization'] = 'Bearer ' + authToken;
+        const res = await fetch(url, Object.assign({}, options, { headers }));
+        if (res.status === 401 && currentUser) {
+            handleSessionExpired();
+            throw new Error('Phiên đăng nhập đã hết hạn.');
+        }
+        return res;
+    }
+
+    // ==================== AUTH 3 BƯỚC ====================
+    function showAuthError(msg) {
+        const box = document.getElementById('authErrorBox');
+        if (!msg) {
+            box.classList.add('hidden');
+            box.innerText = '';
+            return;
+        }
+        box.innerText = msg;
+        box.classList.remove('hidden');
+    }
+
+    function setStepUI(step) {
+        showAuthError('');
+        document.getElementById('formStep1').classList.toggle('hidden', step !== 1);
+        document.getElementById('formStep2').classList.toggle('hidden', step !== 2);
+        document.getElementById('formStep3').classList.toggle('hidden', step !== 3);
+
+        [1, 2, 3].forEach((n) => {
+            const el = document.getElementById('stepInd' + n);
+            el.className = 'step-pill';
+            if (n < step) el.classList.add('done');
+            else if (n === step) el.classList.add('active');
+        });
+    }
+
+    function startOtpCountdown(seconds) {
+        if (otpTimerId) clearInterval(otpTimerId);
+        let rem = seconds;
+        const render = () => {
+            const m = String(Math.floor(rem / 60)).padStart(2, '0');
+            const s = String(rem % 60).padStart(2, '0');
+            document.getElementById('otpCountdown').innerText = `${m}:${s}`;
+        };
+        render();
+        otpTimerId = setInterval(() => {
+            rem--;
+            if (rem <= 0) {
+                clearInterval(otpTimerId);
+                otpTimerId = null;
+                document.getElementById('otpCountdown').innerText = '00:00 (Hết hạn)';
+                return;
+            }
+            render();
+        }, 1000);
+    }
+
+    function clearAuthInputs(clearAccountPass = false) {
+        ['authUserField', 'authPassField', 'authMailField', 'authCodeField'].forEach((id) => {
+            const el = document.getElementById(id);
+            if (!el) return;
+            el.setAttribute('name', 'nohist_' + Math.random().toString(36).slice(2, 10));
+        });
+        document.getElementById('authMailField').value = '';
+        document.getElementById('authCodeField').value = '';
+        if (clearAccountPass) {
+            document.getElementById('authUserField').value = '';
+            document.getElementById('authPassField').value = '';
+        }
+    }
+
+    function resetToStep1() {
+        currentStepToken = '';
+        if (otpTimerId) clearInterval(otpTimerId);
+        clearAuthInputs(true);
+        setStepUI(1);
+    }
+
+    async function submitStep1(e) {
+        if (e && e.preventDefault) e.preventDefault();
+        showAuthError('');
+        const acc = document.getElementById('authUserField').value.trim();
+        const pass = document.getElementById('authPassField').value;
+        if (!acc || !pass) {
+            return showAuthError('Vui lòng nhập đầy đủ số tài khoản và mật khẩu.');
+        }
+
+        const btn = document.getElementById('btnStep1');
+        btn.disabled = true;
+        try {
+            const res = await fetch('/api/auth/step1', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    accountNumber: acc,
+                    password: pass
+                })
+            });
+            const data = await res.json();
+            if (!res.ok) return showAuthError(data.error || 'Đăng nhập thất bại.');
+            currentStepToken = data.stepToken;
+            document.getElementById('authMailField').value = '';
+            setStepUI(2);
+        } catch (err) {
+            showAuthError('Không kết nối được tới máy chủ.');
+        } finally {
+            btn.disabled = false;
+        }
+    }
+
+    async function sendStep2Request() {
+        showAuthError('');
+        const gmail = document.getElementById('authMailField').value.trim();
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(gmail)) {
+            return showAuthError('Vui lòng nhập đúng định dạng địa chỉ Gmail.');
+        }
+
+        const btn = document.getElementById('btnStep2');
+        const btnResend = document.getElementById('btnResendOtp');
+        btn.disabled = true;
+        btnResend.disabled = true;
+        btn.innerText = 'Đang gửi mã OTP qua Gmail...';
+        try {
+            const res = await fetch('/api/auth/step2', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    stepToken: currentStepToken,
+                    gmail
+                })
+            });
+            const data = await res.json();
+            if (!res.ok) {
+                if (res.status === 401) resetToStep1();
+                showAuthError(data.error || 'Gmail không hợp lệ.');
+                return;
+            }
+            document.getElementById('otpSentNotice').innerText = data.message;
+            document.getElementById('authCodeField').value = '';
+            setStepUI(3);
+            startOtpCountdown(data.expiresInSec || 180);
+        } catch (err) {
+            showAuthError('Lỗi kết nối khi gửi OTP.');
+        } finally {
+            btn.disabled = false;
+            btnResend.disabled = false;
+            btn.innerText = 'Gửi mã OTP 6 số qua Gmail';
+        }
+    }
+
+    function submitStep2(e) {
+        if (e && e.preventDefault) e.preventDefault();
+        sendStep2Request();
+    }
+
+    function resendOtp() {
+        sendStep2Request();
+    }
+
+    async function submitStep3(e) {
+        if (e && e.preventDefault) e.preventDefault();
+        showAuthError('');
+        const otp = document.getElementById('authCodeField').value.trim();
+        if (!otp) {
+            return showAuthError('Vui lòng nhập mã OTP 6 số.');
+        }
+
+        const btn = document.getElementById('btnStep3');
+        btn.disabled = true;
+        try {
+            const res = await fetch('/api/auth/step3', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    stepToken: currentStepToken,
+                    otp
+                })
+            });
+            const data = await res.json();
+            if (!res.ok) {
+                if (data.resetRequired || res.status === 401) {
+                    const msg = data.error;
+                    resetToStep1();
+                    showAuthError(msg);
+                } else {
+                    showAuthError(data.error || 'Mã OTP không đúng.');
+                }
+                return;
+            }
+            if (otpTimerId) clearInterval(otpTimerId);
+            clearAuthInputs(true);
+            authToken = data.token;
+            localStorage.setItem('iot_session_token', authToken);
+            enterDashboard(data.user);
+        } catch (err) {
+            showAuthError('Không thể xác minh OTP.');
+        } finally {
+            btn.disabled = false;
+        }
+    }
+
+    let yoloPollTimerId = null;
+    let yoloPollBusy = false;
+    let lastYoloPayload = null;
+
+    function clearYoloOverlay() {
+        lastYoloPayload = null;
+        const canvas = document.getElementById('camYoloCanvas');
+        if (canvas) {
+            const ctx = canvas.getContext('2d');
+            if (ctx && canvas.width > 0 && canvas.height > 0) {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+            }
+            canvas.classList.add('hidden');
+        }
+        const yoloEl = document.getElementById('camYoloStatus');
+        if (yoloEl) {
+            yoloEl.classList.add('hidden');
+            yoloEl.innerText = '';
+        }
+    }
+
+    function stopYoloPoll() {
+        if (yoloPollTimerId) {
+            clearInterval(yoloPollTimerId);
+            yoloPollTimerId = null;
+        }
+        yoloPollBusy = false;
+        clearYoloOverlay();
+    }
+
+    function clearPollTimers() {
+        pollTimerIds.forEach(clearInterval);
+        pollTimerIds = [];
+        stopYoloPoll();
+    }
+
+    function stopDoctorCameraStream() {
+        const img = document.getElementById('camLiveImg');
+        if (img.hasAttribute('src')) img.removeAttribute('src');
+        img.classList.add('hidden');
+        const box = document.getElementById('camBoxWrapper');
+        if (box) box.classList.remove('live-active');
+        document.getElementById('camOverlayBadge').classList.add('hidden');
+        document.getElementById('camStandbyBox').classList.remove('hidden');
+        doctorStreamActive = false;
+        stopYoloPoll();
+    }
+
+    function handleSessionExpired() {
+        clearPollTimers();
+        stopDoctorCameraStream();
+        currentUser = null;
+        authToken = '';
+        localStorage.removeItem('iot_session_token');
+        document.getElementById('appContainer').classList.add('hidden');
+        document.getElementById('authOverlay').classList.remove('hidden');
+        resetToStep1();
+    }
+
+    async function logout() {
+        try {
+            await apiFetch('/api/auth/logout', { method: 'POST' });
+        } catch (_) {}
+        handleSessionExpired();
+    }
+
+    function enterDashboard(user) {
+        currentUser = user;
+        clearPollTimers();
+        doctorManualLive = false;
+        latestFallPhotoUrl = null;
+        stopDoctorCameraStream();
+
+        document.getElementById('authOverlay').classList.add('hidden');
+        document.getElementById('appContainer').classList.remove('hidden');
+
+        document.getElementById('userRoleBadge').innerText = roleLabel(user.role);
+        const isDoctor = (user.role === 'DOCTOR' || user.role === 'NURSE');
+        document.getElementById('userDisplayName').innerText = isDoctor ? 'Bác sĩ' : user.displayName;
+        document.getElementById('userAccNum').innerText = user.accountNumber;
+        document.getElementById('userGmail').innerText = user.gmail;
+
+        document.getElementById('viewDoctor').classList.toggle('hidden', !isDoctor);
+        document.getElementById('viewFamily').classList.toggle('hidden', user.role !== 'FAMILY');
+        document.getElementById('viewTech').classList.toggle('hidden', user.role !== 'TECH');
+
+        if (isDoctor) {
+            doctorBeltOnline = false;
+            updateRealtimeClocks();
+            fetchDoctorStatus();
+            fetchDoctorHistory();
+            pollTimerIds.push(setInterval(updateRealtimeClocks, 1000));
+            pollTimerIds.push(setInterval(fetchDoctorStatus, 500));
+            pollTimerIds.push(setInterval(fetchDoctorHistory, 3000));
+        } else if (user.role === 'FAMILY') {
+            updateRealtimeClocks();
+            fetchFamilyHistory();
+            pollTimerIds.push(setInterval(updateRealtimeClocks, 1000));
+            pollTimerIds.push(setInterval(fetchFamilyHistory, 5000));
+        } else if (user.role === 'TECH') {
+            updateRealtimeClocks();
+            fetchTechDashboard();
+            pollTimerIds.push(setInterval(updateRealtimeClocks, 1000));
+            pollTimerIds.push(setInterval(fetchTechDashboard, 4000));
+        }
+    }
+
+    // ==================== DASHBOARD: BÁC SĨ (DOCTOR) ====================
+    function toggleManualLive() {
+        doctorManualLive = !doctorManualLive;
+        fetchDoctorStatus();
+    }
+
+    async function manualCapture() {
+        try {
+            const res = await apiFetch('/api/camera/capture', { method: 'POST' });
+            const data = await res.json();
+            if (!res.ok) return alert(data.error || 'Không chụp được ảnh.');
+            openPhotoModal(data.photoUrl, 'Ảnh chụp kiểm tra phòng hiện tại');
+        } catch (err) {
+            alert('Lỗi chụp ảnh: ' + err.message);
+        }
+    }
+
+    function openPhotoModal(url, title) {
+        if (!url) return;
+        const sep = url.includes('?') ? '&' : '?';
+        document.getElementById('photoModalTitle').innerText = title || 'Ảnh hiện trường';
+        document.getElementById('photoModalImg').src = `${url}${sep}token=${encodeURIComponent(authToken)}&t=${Date.now()}`;
+        document.getElementById('photoModal').classList.remove('hidden');
+    }
+
+    function closePhotoModal() {
+        document.getElementById('photoModal').classList.add('hidden');
+        document.getElementById('photoModalImg').src = '';
+    }
+
+    function viewLatestFallPhoto() {
+        if (latestFallPhotoUrl) {
+            openPhotoModal(latestFallPhotoUrl, 'Ảnh chụp phòng khi phát hiện té ngã gần nhất');
+        }
+    }
+
+    function drawYoloBoxes(data) {
+        const canvas = document.getElementById('camYoloCanvas');
+        const img = document.getElementById('camLiveImg');
+        if (!canvas || !img || img.classList.contains('hidden')) return;
+
+        const rect = canvas.getBoundingClientRect();
+        const cw = Math.round(rect.width);
+        const ch = Math.round(rect.height);
+        if (cw <= 0 || ch <= 0) return;
+
+        if (canvas.width !== cw) canvas.width = cw;
+        if (canvas.height !== ch) canvas.height = ch;
+
+        const ctx = canvas.getContext('2d');
+        ctx.clearRect(0, 0, cw, ch);
+
+        if (!data || !data.active || !Array.isArray(data.detections)) return;
+
+        const iw = img.naturalWidth || data.imageWidth || 640;
+        const ih = img.naturalHeight || data.imageHeight || 480;
+        if (iw <= 0 || ih <= 0) return;
+
+        const scale = Math.min(cw / iw, ch / ih);
+        const drawW = iw * scale;
+        const drawH = ih * scale;
+        const offsetX = (cw - drawW) / 2;
+        const offsetY = (ch - drawH) / 2;
+
+        const fallBoxes = data.detections.filter((d) => d && d.is_fall);
+        for (const det of fallBoxes) {
+            const [nx1, ny1, nx2, ny2] = det.bbox_norm || [0, 0, 0, 0];
+            const x = offsetX + nx1 * drawW;
+            const y = offsetY + ny1 * drawH;
+            const bw = Math.max(2, (nx2 - nx1) * drawW);
+            const bh = Math.max(2, (ny2 - ny1) * drawH);
+
+            ctx.lineWidth = 3;
+            ctx.strokeStyle = '#ef4444';
+            ctx.strokeRect(x, y, bw, bh);
+
+            const text = 'te nga';
+            ctx.font = '700 12px "Be Vietnam Pro", sans-serif';
+            const textW = ctx.measureText(text).width + 12;
+            const labelY = y >= 22 ? y - 20 : y + 2;
+            ctx.fillStyle = '#ef4444';
+            ctx.fillRect(x, labelY, textW, 20);
+            ctx.fillStyle = '#ffffff';
+            ctx.fillText(text, x + 6, labelY + 14);
+        }
+    }
+
+    async function fetchYoloDetections() {
+        if (yoloPollBusy || !authToken || !currentUser || (currentUser.role !== 'DOCTOR' && currentUser.role !== 'NURSE')) return;
+        yoloPollBusy = true;
+        try {
+            const res = await apiFetch('/api/camera/detections');
+            if (!res.ok) return;
+            const data = await res.json();
+            if (!data.active) {
+                stopYoloPoll();
+                return;
+            }
+            lastYoloPayload = data;
+            drawYoloBoxes(data);
+
+            const yoloEl = document.getElementById('camYoloStatus');
+            if (yoloEl) {
+                yoloEl.classList.remove('hidden');
+                const fallCount = Array.isArray(data.detections) ? data.detections.filter((d) => d && d.is_fall).length : 0;
+                if (!data.workerOnline) {
+                    yoloEl.innerText = 'YOLO GPU: Chưa kết nối Worker cổng 8001 (vẫn chạy Live)';
+                    yoloEl.style.color = '#d97706';
+                } else if (fallCount > 0) {
+                    yoloEl.innerText = `YOLO GPU: Đang khoanh ${fallCount} người té ngã (${data.inferenceMs ?? '--'} ms)`;
+                    yoloEl.style.color = 'var(--accent-red)';
+                } else {
+                    yoloEl.innerText = `YOLO GPU: Đang quét khung hình (${data.inferenceMs ?? '--'} ms)`;
+                    yoloEl.style.color = 'var(--accent-blue)';
+                }
+            }
+        } catch (_) {
+        } finally {
+            yoloPollBusy = false;
+        }
+    }
+
+    function startYoloPoll() {
+        const canvas = document.getElementById('camYoloCanvas');
+        if (canvas) canvas.classList.remove('hidden');
+        if (!yoloPollTimerId) {
+            fetchYoloDetections();
+            yoloPollTimerId = setInterval(fetchYoloDetections, 150);
+        }
+    }
+
+    function updateDoctorCameraUI(cam) {
+        const btnLive = document.getElementById('btnToggleLive');
+        const btnFallPhoto = document.getElementById('btnViewFallPhoto');
+        const statusEl = document.getElementById('camStatusText');
+        const img = document.getElementById('camLiveImg');
+        const box = document.getElementById('camBoxWrapper');
+        const standby = document.getElementById('camStandbyBox');
+        const overlay = document.getElementById('camOverlayBadge');
+        const overlayTxt = document.getElementById('camOverlayText');
+
+        latestFallPhotoUrl = (cam && cam.lastFallPhotoUrl) ? cam.lastFallPhotoUrl : null;
+        if (btnFallPhoto) {
+            btnFallPhoto.classList.toggle('hidden', !latestFallPhotoUrl);
+        }
+
+        const isAutoLive = Boolean(cam && cam.autoLive);
+        btnLive.disabled = isAutoLive;
+        btnLive.innerText = isAutoLive ? 'Đang Live (Cảnh báo ngã)' : (doctorManualLive ? 'Tắt Live Stream' : 'Mở Live Stream');
+        btnLive.classList.toggle('live-on', doctorManualLive || isAutoLive);
+
+        if (!cam || !cam.online) {
+            statusEl.innerText = 'Camera ngoại tuyến / chưa kết nối';
+            statusEl.style.color = 'var(--accent-red)';
+            if (doctorStreamActive) stopDoctorCameraStream();
+            return;
+        }
+        if (!cam.sensorOk) {
+            statusEl.innerText = cam.statusText || 'Lỗi cảm biến Camera';
+            statusEl.style.color = 'var(--accent-red)';
+            if (doctorStreamActive) stopDoctorCameraStream();
+            return;
+        }
+
+        statusEl.innerText = cam.statusText || ('Sẵn sàng (' + cam.ip + ')');
+        statusEl.style.color = 'var(--accent-green)';
+
+        const shouldLive = Boolean(cam.autoLive || doctorManualLive);
+        if (shouldLive) {
+            overlayTxt.innerText = cam.autoLive ? 'LIVE TỰ ĐỘNG + YOLO (TÉ NGÃ)' : 'LIVE STREAM';
+            overlay.classList.remove('hidden');
+            standby.classList.add('hidden');
+            if (box) box.classList.add('live-active');
+            img.classList.remove('hidden');
+            if (!doctorStreamActive) {
+                doctorStreamActive = true;
+                img.src = `/api/camera/stream?token=${encodeURIComponent(authToken)}&t=${Date.now()}`;
+            }
+            if (isAutoLive) {
+                startYoloPoll();
+            } else {
+                stopYoloPoll();
+            }
+        } else {
+            if (doctorStreamActive) stopDoctorCameraStream();
+            else stopYoloPoll();
+        }
+    }
+
+    let doctorBeltOnline = false;
+
+    function formatDateObjVn(d) {
+        const p = (n) => String(n).padStart(2, '0');
+        return `${p(d.getDate())}/${p(d.getMonth() + 1)}/${d.getFullYear()} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
+    }
+
+    function updateRealtimeClocks() {
+        if (!currentUser) return;
+        const now = new Date();
+        if (currentUser.role === 'DOCTOR' || currentUser.role === 'NURSE') {
+            const p = (n) => String(n).padStart(2, '0');
+            const nowTimeStr = `${p(now.getHours())}:${p(now.getMinutes())}:${p(now.getSeconds())}`;
+            document.getElementById('refreshClock').innerText = nowTimeStr;
+            if (doctorBeltOnline) {
+                const bt = document.getElementById('beltTime');
+                bt.innerText = nowTimeStr;
+                bt.style.color = 'var(--accent-green)';
+            }
+        } else if (currentUser.role === 'FAMILY') {
+            const start = new Date(now.getTime() - 7 * 86400000);
+            document.getElementById('familyWindowRange').innerText = `${formatDateObjVn(start)} → ${formatDateObjVn(now)}`;
+        } else if (currentUser.role === 'TECH') {
+            const start = new Date(now.getTime() - 30 * 86400000);
+            document.getElementById('techWindowRange').innerText = `${formatDateObjVn(start)} → ${formatDateObjVn(now)}`;
+        }
+    }
+
+    function formatVnDateTime(val) {
+        if (val === null || val === undefined) return '';
+        const s = String(val).trim();
+        if (!s) return '';
+        let m = s.match(/^(\d{4})-(\d{2})-(\d{2})(?:[ T](\d{2}:\d{2}:\d{2}))?/);
+        if (m) {
+            const datePart = `${m[3]}/${m[2]}/${m[1]}`;
+            return m[4] ? `${datePart} ${m[4]}` : datePart;
+        }
+        m = s.match(/^(\d{1,2}:\d{2}:\d{2})[,\s]+(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+        if (m) {
+            return `${m[2].padStart(2, '0')}/${m[3].padStart(2, '0')}/${m[4]} ${m[1]}`;
+        }
+        return s;
+    }
+
+    async function fetchDoctorStatus() {
+        try {
+            const res = await apiFetch('/api/status');
+            if (!res.ok) return;
+            const data = await res.json();
+
+            if (data.vitals) {
+                document.getElementById('valBpm').innerText = data.vitals.bpm || '--';
+                document.getElementById('valSpo2').innerText = data.vitals.spo2 || '--';
+                document.getElementById('vitalsTime').innerText = data.vitals.updated_at ? formatVnDateTime(data.vitals.updated_at) : 'Chưa cập nhật';
+            }
+
+            const fallBadge = document.getElementById('fallBadge');
+            const pillNormal = document.getElementById('pillNormal');
+            const pillFall = document.getElementById('pillFall');
+            pillNormal.className = 'state-pill';
+            pillFall.className = 'state-pill';
+
+            const rawDesc = (data.belt && data.belt.state_desc) ? data.belt.state_desc.toUpperCase() : '';
+            const isBeltWalkOrStand = Boolean(
+                data.belt &&
+                (rawDesc.indexOf('DI BO') >= 0 || rawDesc.indexOf('DUNG') >= 0 || rawDesc.indexOf('NGOI') >= 0 || rawDesc.indexOf('BINH THUONG') >= 0 || data.belt.status === 'SAFE')
+            );
+
+            if (data.fall_status === 'FALL_DETECTED' || rawDesc.indexOf('TE NGA') >= 0) {
+                fallBadge.className = 'badge-status badge-danger';
+                fallBadge.innerHTML = '<span>🚨</span> <span>TÉ NGÃ NGUY HIỂM!</span>';
+                pillFall.className = 'state-pill active-fall';
+            } else if (isBeltWalkOrStand) {
+                fallBadge.className = 'badge-status badge-normal';
+                fallBadge.innerHTML = '<span>🟢</span> <span>BÌNH THƯỜNG</span>';
+                pillNormal.className = 'state-pill active-normal';
+            } else {
+                fallBadge.className = 'badge-status badge-wait';
+                fallBadge.innerHTML = '<span>⏳</span> <span>CHỜ TÍN HIỆU ĐAI</span>';
+            }
+
+            const isBeltOnline = (typeof data.belt_online === 'boolean') ? data.belt_online : Boolean(data.belt);
+            doctorBeltOnline = isBeltOnline;
+            const bt = document.getElementById('beltTime');
+            if (isBeltOnline) {
+                const p = (n) => String(n).padStart(2, '0');
+                const now = new Date();
+                const nowTimeStr = `${p(now.getHours())}:${p(now.getMinutes())}:${p(now.getSeconds())}`;
+                bt.innerText = nowTimeStr;
+                bt.style.color = 'var(--accent-green)';
+                document.getElementById('refreshClock').innerText = nowTimeStr;
+            } else if (data.belt) {
+                bt.innerText = data.belt.updated_at + ' (Mất tín hiệu)';
+                bt.style.color = 'var(--accent-amber)';
+            }
+
+            updateDoctorCameraUI(data.camera);
+
+            const buzzerElem = document.getElementById('buzzerState');
+            if (data.buzzer_status === 'ON') {
+                buzzerElem.innerText = 'ĐANG HÚ CẢNH BÁO';
+                buzzerElem.style.color = 'var(--accent-red)';
+            } else {
+                buzzerElem.innerText = 'ĐANG TẮT';
+                buzzerElem.style.color = 'var(--accent-green)';
+            }
+        } catch (err) {
+            console.error(err);
+        }
+    }
+
+    async function fetchDoctorHistory() {
+        try {
+            const res = await apiFetch('/api/history');
+            if (!res.ok) return;
+            const data = await res.json();
+            const tbody = document.getElementById('doctorHistoryBody');
+            let rows = '';
+
+            if (data.falls && data.falls.length > 0) {
+                data.falls.slice(0, 4).forEach((f) => {
+                    const fTime = formatVnDateTime(f.timestamp);
+                    const photoBtn = f.photo_url
+                        ? `<button class="btn-link-photo" onclick="openPhotoModal('${esc(f.photo_url)}', 'Ảnh sự cố té ngã lúc ${esc(fTime)}')">📷 Xem ảnh lúc ngã</button>`
+                        : '';
+                    rows += `
+                        <tr style="background: rgba(244, 63, 94, 0.08);">
+                            <td>${esc(fTime)}</td>
+                            <td style="color: var(--accent-red); font-weight: 700;">TÉ NGÃ KHẨN CẤP</td>
+                            <td><span style="color: var(--accent-red);">Cần hỗ trợ</span>${photoBtn}</td>
+                        </tr>
+                    `;
+                });
+            }
+
+            if (data.vitals && data.vitals.length > 0) {
+                data.vitals.slice(0, 5).forEach((v) => {
+                    rows += `
+                        <tr>
+                            <td>${esc(formatVnDateTime(v.timestamp))}</td>
+                            <td style="color: var(--accent-blue);">Đo sức khỏe (${esc(v.bpm)} BPM | ${esc(v.spo2)}%)</td>
+                            <td><span style="color: var(--accent-green);">Bình thường</span></td>
+                        </tr>
+                    `;
+                });
+            }
+
+            if (!rows) {
+                rows = '<tr><td colspan="3" style="text-align:center; color:var(--text-secondary);">Chưa có bản ghi nào.</td></tr>';
+            }
+            tbody.innerHTML = rows;
+        } catch (err) {
+            console.error(err);
+        }
+    }
+
+    async function controlBuzzer(cmd) {
+        try {
+            await apiFetch('/api/actuator/buzzer', {
+                method: 'POST',
+                body: JSON.stringify({ command: cmd })
+            });
+            fetchDoctorStatus();
+        } catch (err) {
+            alert('Lỗi điều khiển còi: ' + err.message);
+        }
+    }
+
+    // ==================== DASHBOARD: NGƯỜI THÂN (CHỈ 7 NGÀY) ====================
+    async function fetchFamilyHistory() {
+        try {
+            const res = await apiFetch('/api/family/history');
+            if (!res.ok) return;
+            const data = await res.json();
+
+            document.getElementById('famFallCount').innerText = data.falls7d.length;
+            document.getElementById('famVitalsCount').innerText = data.vitals7d.length;
+
+            const fallsBody = document.getElementById('familyFallsBody');
+            if (data.falls7d.length === 0) {
+                fallsBody.innerHTML = '<tr><td colspan="3" style="text-align:center; color:var(--accent-green);">Không ghi nhận sự cố té ngã nào trong 7 ngày qua.</td></tr>';
+            } else {
+                fallsBody.innerHTML = data.falls7d.map((f) => `
+                    <tr style="background: rgba(244, 63, 94, 0.08);">
+                        <td>${esc(formatVnDateTime(f.timestamp))}</td>
+                        <td style="color:var(--accent-red); font-weight:700;">Cảnh báo té ngã</td>
+                        <td>Đã phát báo động tới Bác sĩ trực</td>
+                    </tr>
+                `).join('');
+            }
+
+            const vitalsBody = document.getElementById('familyVitalsBody');
+            if (data.vitals7d.length === 0) {
+                vitalsBody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:var(--text-secondary);">Chưa có lượt đo sức khỏe nào trong 7 ngày qua.</td></tr>';
+            } else {
+                vitalsBody.innerHTML = data.vitals7d.map((v) => {
+                    let evalHtml = '<span class="tag-pill tag-ok">Bình thường</span>';
+                    if (v.spo2 < 94 || v.bpm > 110 || v.bpm < 50) {
+                        evalHtml = '<span class="tag-pill tag-err">Cần theo dõi</span>';
+                    }
+                    return `
+                        <tr>
+                            <td>${esc(formatVnDateTime(v.timestamp))}</td>
+                            <td style="color:var(--accent-heart); font-weight:700;">${esc(v.bpm)} BPM</td>
+                            <td style="color:var(--accent-blue); font-weight:700;">${esc(v.spo2)}%</td>
+                            <td>${evalHtml}</td>
+                        </tr>
+                    `;
+                }).join('');
+            }
+        } catch (err) {
+            console.error(err);
+        }
+    }
+
+    // ==================== DASHBOARD: KỸ THUẬT VIÊN (30 NGÀY) ====================
+    function formatNodeSource(nodeId) {
+        const map = {
+            BELT_NODE: 'Đai đeo',
+            BEDSIDE_NODE: 'Đo nhịp tim',
+            ESP32_CAM: 'Camera',
+            WEB_AUTH: 'Bảo mật Web',
+            MQTT_BROKER: 'Mạng MQTT',
+            SYSTEM_SMTP: 'Gửi OTP Gmail'
+        };
+        return map[nodeId] || nodeId || '--';
+    }
+
+    function cleanSensorLabel(text, fallback = '') {
+        return String(text ?? fallback)
+            .replace(/\s*\((?:MPU6050|MAX30102|OV\d+[^)]*)\)/gi, '')
+            .replace(/\b(?:MPU6050|MAX30102)\s*(?:0x[0-9a-f]+)?\s*/gi, 'Thiết bị ')
+            .replace(/\b(?:OV3660|OV2640)\s*-\s*/gi, '')
+            .replace(/\s{2,}/g, ' ')
+            .trim();
+    }
+
+    function formatTechCardName(node) {
+        if (node.id === 'BELT_NODE') return 'Mạch không dây';
+        if (node.id === 'BEDSIDE_NODE') return 'Mạch có dây';
+        return cleanSensorLabel(node.name);
+    }
+
+    function formatAccessIpHtml(rawIp) {
+        const ip = String(rawIp || '').trim().replace(/^::ffff:/i, '');
+        if (!ip || ip === '::1' || ip === '127.0.0.1') {
+            return `<strong>127.0.0.1</strong> <span style="color:var(--text-secondary); font-size:0.8rem;">(Máy chủ localhost)</span>`;
+        }
+        if (/^(192\.168\.|10\.|172\.(1[6-9]|2\d|3[0-1])\.)/.test(ip)) {
+            return `<strong>${esc(ip)}</strong> <span style="color:var(--accent-blue); font-size:0.8rem;">(Máy trong mạng LAN)</span>`;
+        }
+        return `<strong>${esc(ip)}</strong> <span style="color:var(--accent-amber); font-size:0.8rem;">(IP ngoài / Internet)</span>`;
+    }
+
+    function setTechErrorFilter(mode) {
+        techErrorFilter = mode;
+        document.getElementById('fltAll').classList.toggle('active', mode === 'ALL');
+        document.getElementById('fltNode').classList.toggle('active', mode === 'NODE');
+        document.getElementById('fltSec').classList.toggle('active', mode === 'SEC');
+        renderTechErrors();
+    }
+
+    function renderTechErrors() {
+        const tbody = document.getElementById('techErrorsBody');
+        const filtered = lastTechErrors.filter((e) => {
+            const isSec = (e.node_id === 'WEB_AUTH' || e.node_id === 'MQTT_BROKER' || e.event_type.includes('INTRUSION') || e.event_type.includes('BRUTE') || e.event_type.includes('FORBIDDEN'));
+            if (techErrorFilter === 'SEC') return isSec;
+            if (techErrorFilter === 'NODE') return !isSec;
+            return true;
+        });
+
+        if (filtered.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:var(--accent-green);">Không có lỗi hoặc cảnh báo nào trong 30 ngày qua.</td></tr>';
+            return;
+        }
+
+        tbody.innerHTML = filtered.map((e) => {
+            const sevClass = e.severity === 'CRITICAL' ? 'tag-crit' : (e.severity === 'ERROR' ? 'tag-err' : 'tag-warn');
+            return `
+                <tr>
+                    <td>${esc(formatVnDateTime(e.timestamp))}</td>
+                    <td style="font-weight:700;">${esc(formatNodeSource(e.node_id))}</td>
+                    <td style="color:var(--accent-blue);">${esc(e.event_type)}</td>
+                    <td><span class="tag-pill ${sevClass}">${esc(e.severity)}</span></td>
+                    <td>${esc(e.detail)}</td>
+                </tr>
+            `;
+        }).join('');
+    }
+
+    async function fetchTechDashboard() {
+        try {
+            const res = await apiFetch('/api/tech/dashboard');
+            if (!res.ok) return;
+            const data = await res.json();
+
+            const nodesGrid = document.getElementById('techNodesGrid');
+            nodesGrid.innerHTML = (data.nodes || []).map((n) => {
+                let badge = '<span class="tag-pill tag-warn">Chờ kết nối</span>';
+                if (n.online && n.sensorOk) badge = '<span class="tag-pill tag-ok">ONLINE • ỔN ĐỊNH</span>';
+                else if (n.online && !n.sensorOk) badge = '<span class="tag-pill tag-err">ONLINE • LỖI CẢM BIẾN</span>';
+                else if (n.lastSeenAt) badge = '<span class="tag-pill tag-err">MẤT KẾT NỐI</span>';
+
+                return `
+                    <div class="card">
+                        <div>
+                            <div class="card-tag">${esc(formatNodeSource(n.id))}</div>
+                            <h3 class="card-title" style="justify-content:space-between; margin-bottom:10px;">
+                                <span>${esc(formatTechCardName(n))}</span>
+                            </h3>
+                            <div style="margin-bottom:10px;">${badge}</div>
+                            <div style="font-size:0.86rem; color:var(--text-primary); line-height:1.4;">${esc(cleanSensorLabel(n.statusText))}</div>
+                        </div>
+                        <div style="font-size:0.78rem; color:var(--text-secondary); margin-top:12px;">
+                            Lần báo cuối: ${esc(n.lastSeenAt ? formatVnDateTime(n.lastSeenAt) : 'Chưa kết nối')}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            lastTechErrors = data.nodeErrors30d || [];
+            renderTechErrors();
+
+            const loginsBody = document.getElementById('techLoginsBody');
+            const logins = data.loginHistory30d || [];
+            if (logins.length === 0) {
+                loginsBody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:var(--text-secondary);">Chưa có lịch sử đăng nhập trong 30 ngày qua.</td></tr>';
+            } else {
+                loginsBody.innerHTML = logins.map((l) => {
+                    const stClass = l.status === 'SUCCESS' ? 'tag-ok' : 'tag-err';
+                    const stLabel = l.status === 'SUCCESS' ? 'Thành công' : l.status;
+                    return `
+                        <tr>
+                            <td>${esc(formatVnDateTime(l.timestamp))}</td>
+                            <td style="font-weight:700;">${esc(l.account_number)}</td>
+                            <td style="color:var(--text-secondary); letter-spacing:2px;">${esc(l.password_masked)}</td>
+                            <td>${esc(l.gmail)}</td>
+                            <td>${esc(roleLabel(l.role))}</td>
+                            <td><span class="tag-pill ${stClass}">${esc(stLabel)}</span></td>
+                            <td>${formatAccessIpHtml(l.ip_address)}</td>
+                        </tr>
+                    `;
+                }).join('');
+            }
+        } catch (err) {
+            console.error(err);
+        }
+    }
+
+    // Tự kiểm tra phiên đăng nhập khi mở trang
+    window.addEventListener('pageshow', () => {
+        if (!currentUser) clearAuthInputs(true);
+    });
+
+    (async function boot() {
+        clearAuthInputs(true);
+        if (!authToken) return;
+        try {
+            const res = await fetch('/api/auth/me', {
+                headers: { 'Authorization': 'Bearer ' + authToken }
+            });
+            if (!res.ok) {
+                localStorage.removeItem('iot_session_token');
+                authToken = '';
+                return;
+            }
+            const data = await res.json();
+            enterDashboard(data.user);
+        } catch (_) {}
+    })();
+</script>
+</body>
+</html>

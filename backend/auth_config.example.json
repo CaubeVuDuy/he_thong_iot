@@ -1,0 +1,33 @@
+{
+  "smtp": {
+    "senderEmail": "DIEN_GMAIL_CHINH_CUA_BAN@gmail.com",
+    "appPassword": "DIEN_MAT_KHAU_UNG_DUNG_16_KY_TU"
+  },
+  "otp": {
+    "expiryMinutes": 3,
+    "maxAttempts": 5
+  },
+  "accounts": [
+    {
+      "accountNumber": "1001",
+      "password": "123456",
+      "gmail": "DIEN_GMAIL_BAC_SI@gmail.com",
+      "role": "DOCTOR",
+      "displayName": "Bác sĩ"
+    },
+    {
+      "accountNumber": "2002",
+      "password": "123456",
+      "gmail": "DIEN_GMAIL_KY_THUAT_VIEN@gmail.com",
+      "role": "TECH",
+      "displayName": "Kỹ thuật viên IoT"
+    },
+    {
+      "accountNumber": "3003",
+      "password": "123456",
+      "gmail": "DIEN_GMAIL_NGUOI_THAN@gmail.com",
+      "role": "FAMILY",
+      "displayName": "Người thân bệnh nhân"
+    }
+  ]
+}
